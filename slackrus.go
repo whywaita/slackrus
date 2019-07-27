@@ -4,13 +4,13 @@ package slackrus
 import (
 	"fmt"
 
-	"github.com/johntdyer/slack-go"
+	"github.com/nlopes/slack"
 	"github.com/sirupsen/logrus"
 )
 
 // Project version
 const (
-	VERISON = "0.0.3"
+	VERISON = "0.1.0"
 )
 
 // SlackrusHook is a logrus Hook for dispatching messages to the specified
@@ -19,7 +19,7 @@ type SlackrusHook struct {
 	// Messages with a log level not contained in this array
 	// will not be dispatched. If nil, all messages will be dispatched.
 	AcceptedLevels []logrus.Level
-	HookURL        string
+	LegacyToken    string
 	IconURL        string
 	Channel        string
 	IconEmoji      string
@@ -39,10 +39,12 @@ func (sh *SlackrusHook) Levels() []logrus.Level {
 
 // Fire -  Sent event to slack
 func (sh *SlackrusHook) Fire(e *logrus.Entry) error {
+	api := slack.New(sh.LegacyToken)
+
 	if sh.Disabled {
 		return nil
 	}
-	
+
 	color := ""
 	switch e.Level {
 	case logrus.DebugLevel:
@@ -55,14 +57,14 @@ func (sh *SlackrusHook) Fire(e *logrus.Entry) error {
 		color = "warning"
 	}
 
-	msg := &slack.Message{
+	param := slack.PostMessageParameters{
 		Username:  sh.Username,
 		Channel:   sh.Channel,
 		IconEmoji: sh.IconEmoji,
-		IconUrl:   sh.IconURL,
+		IconURL:   sh.IconURL,
 	}
 
-	attach := msg.NewAttachment()
+	attach := slack.Attachment{}
 
 	newEntry := sh.newEntry(e)
 	// If there are fields we need to render them at attachments
@@ -72,7 +74,7 @@ func (sh *SlackrusHook) Fire(e *logrus.Entry) error {
 		attach.Text = "Message fields"
 
 		for k, v := range newEntry.Data {
-			slackField := &slack.Field{}
+			slackField := &slack.AttachmentField{}
 
 			slackField.Title = k
 			slackField.Value = fmt.Sprint(v)
@@ -81,7 +83,7 @@ func (sh *SlackrusHook) Fire(e *logrus.Entry) error {
 				slackField.Short = true
 			}
 
-			attach.AddField(slackField)
+			attach.Fields = append(attach.Fields, *slackField)
 		}
 		attach.Pretext = newEntry.Message
 	} else {
@@ -90,14 +92,13 @@ func (sh *SlackrusHook) Fire(e *logrus.Entry) error {
 	attach.Fallback = newEntry.Message
 	attach.Color = color
 
-	c := slack.NewClient(sh.HookURL)
-
 	if sh.Asynchronous {
-		go c.SendMessage(msg)
+		go api.PostMessage(sh.Channel, slack.MsgOptionPostMessageParameters(param), slack.MsgOptionAttachments(attach))
 		return nil
 	}
 
-	return c.SendMessage(msg)
+	_, _, err := api.PostMessage(sh.Channel, slack.MsgOptionPostMessageParameters(param), slack.MsgOptionAttachments(attach))
+	return err
 }
 
 func (sh *SlackrusHook) newEntry(entry *logrus.Entry) *logrus.Entry {
