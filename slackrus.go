@@ -4,7 +4,7 @@ package slackrus
 import (
 	"fmt"
 
-	"github.com/nlopes/slack"
+	"github.com/slack-go/slack"
 	"github.com/sirupsen/logrus"
 )
 

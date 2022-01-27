@@ -3,7 +3,7 @@ package main
 import (
 	"os"
 
-	"github.com/johntdyer/slackrus"
+	"github.com/whywaita/slackrus"
 	logrus "github.com/sirupsen/logrus"
 )
 
@@ -16,7 +16,7 @@ func main() {
 	logrus.SetLevel(logrus.DebugLevel)
 
 	logrus.AddHook(&slackrus.SlackrusHook{
-		HookURL:        "https://hooks.slack.com/services/abc123/defghijklmnopqrstuvwxyz",
+		//HookURL:        "https://hooks.slack.com/services/abc123/defghijklmnopqrstuvwxyz",
 		AcceptedLevels: slackrus.LevelThreshold(logrus.DebugLevel),
 		Channel:        "#slack-testing",
 		IconEmoji:      ":ghost:",
